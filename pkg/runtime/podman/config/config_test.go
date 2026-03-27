@@ -19,6 +19,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -597,4 +598,91 @@ func TestLoadAgent(t *testing.T) {
 			t.Errorf("Expected ErrInvalidConfig, got: %v", err)
 		}
 	})
+}
+
+func TestListAgents(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns empty list when directory does not exist", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, "nonexistent")
+
+		cfg, err := NewConfig(configDir)
+		if err != nil {
+			t.Fatalf("NewConfig() failed: %v", err)
+		}
+
+		agents, err := cfg.ListAgents()
+		if err != nil {
+			t.Fatalf("ListAgents() failed: %v", err)
+		}
+
+		if len(agents) != 0 {
+			t.Errorf("Expected empty list, got: %v", agents)
+		}
+	})
+
+	t.Run("returns claude after GenerateDefaults", func(t *testing.T) {
+		t.Parallel()
+
+		configDir := t.TempDir()
+
+		cfg, err := NewConfig(configDir)
+		if err != nil {
+			t.Fatalf("NewConfig() failed: %v", err)
+		}
+
+		if err := cfg.GenerateDefaults(); err != nil {
+			t.Fatalf("GenerateDefaults() failed: %v", err)
+		}
+
+		agents, err := cfg.ListAgents()
+		if err != nil {
+			t.Fatalf("ListAgents() failed: %v", err)
+		}
+
+		expected := []string{"claude"}
+		if !slices.Equal(agents, expected) {
+			t.Errorf("Expected %v, got: %v", expected, agents)
+		}
+	})
+
+	t.Run("returns sorted list of multiple agents", func(t *testing.T) {
+		t.Parallel()
+
+		configDir := t.TempDir()
+
+		cfg, err := NewConfig(configDir)
+		if err != nil {
+			t.Fatalf("NewConfig() failed: %v", err)
+		}
+
+		if err := cfg.GenerateDefaults(); err != nil {
+			t.Fatalf("GenerateDefaults() failed: %v", err)
+		}
+
+		// Add a goose agent config
+		gooseConfig := &AgentConfig{
+			Packages:        []string{},
+			RunCommands:     []string{},
+			TerminalCommand: []string{"goose"},
+		}
+		data, _ := json.MarshalIndent(gooseConfig, "", "  ")
+		if err := os.WriteFile(filepath.Join(configDir, "goose.json"), data, 0644); err != nil {
+			t.Fatalf("Failed to write goose config: %v", err)
+		}
+
+		agents, err := cfg.ListAgents()
+		if err != nil {
+			t.Fatalf("ListAgents() failed: %v", err)
+		}
+
+		expected := []string{"claude", "goose"}
+		if !slices.Equal(agents, expected) {
+			t.Errorf("Expected %v, got: %v", expected, agents)
+		}
+	})
+
 }
