@@ -47,6 +47,7 @@ func NewRootCmd() *cobra.Command {
 
 	// Add subcommands
 	rootCmd.AddCommand(NewVersionCmd())
+	rootCmd.AddCommand(NewInfoCmd())
 	rootCmd.AddCommand(NewInitCmd())
 	rootCmd.AddCommand(NewWorkspaceCmd())
 	rootCmd.AddCommand(NewListCmd())

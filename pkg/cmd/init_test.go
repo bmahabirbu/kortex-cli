@@ -1546,7 +1546,7 @@ func TestInitCmd_E2E(t *testing.T) {
 			t.Error("Expected non-empty Name in JSON output")
 		}
 
-		if workspace.Project == "" {
+		if workspace.Project == nil || *workspace.Project == "" {
 			t.Error("Expected non-empty Project in JSON output")
 		}
 

@@ -114,8 +114,8 @@ func TestInstanceToWorkspace(t *testing.T) {
 			t.Errorf("Expected name 'test-workspace', got '%s'", result.Name)
 		}
 
-		if result.Project != "test-project" {
-			t.Errorf("Expected project 'test-project', got '%s'", result.Project)
+		if result.Project == nil || *result.Project != "test-project" {
+			t.Errorf("Expected project 'test-project', got '%v'", result.Project)
 		}
 
 		if result.Paths.Source != sourceDir {

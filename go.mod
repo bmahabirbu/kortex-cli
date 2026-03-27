@@ -11,3 +11,5 @@ require (
 )
 
 require github.com/inconshreveable/mousetrap v1.1.0 // indirect
+
+replace github.com/kortex-hub/kortex-cli-api/cli/go => /home/brian/kortex-cli-api/cli/go
