@@ -105,6 +105,13 @@ func (i *infoCmd) run(cmd *cobra.Command, args []string) error {
 
 // outputJSON outputs the info response as JSON
 func (i *infoCmd) outputJSON(cmd *cobra.Command, agents, runtimes []string) error {
+	if agents == nil {
+		agents = []string{}
+	}
+	if runtimes == nil {
+		runtimes = []string{}
+	}
+
 	response := infoResponse{
 		Version:  version.Version,
 		Agents:   agents,
