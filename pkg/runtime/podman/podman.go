@@ -84,6 +84,19 @@ func (p *podmanRuntime) Initialize(storageDir string) error {
 	return nil
 }
 
+// Ensure podmanRuntime implements runtime.AgentLister at compile time.
+var _ runtime.AgentLister = (*podmanRuntime)(nil)
+
+// ListAgents returns the names of all agents configured for the Podman runtime.
+// It delegates to the config manager's ListAgents method.
+// Returns an empty slice if the runtime has not been initialized.
+func (p *podmanRuntime) ListAgents() ([]string, error) {
+	if p.config == nil {
+		return []string{}, nil
+	}
+	return p.config.ListAgents()
+}
+
 // Type returns the runtime type identifier.
 func (p *podmanRuntime) Type() string {
 	return "podman"

@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kortex-hub/kortex-cli/pkg/runtime/podman/config"
+	"github.com/kortex-hub/kortex-cli/pkg/instances"
 	"github.com/kortex-hub/kortex-cli/pkg/runtimesetup"
 	"github.com/kortex-hub/kortex-cli/pkg/version"
 	"github.com/spf13/cobra"
@@ -39,7 +39,8 @@ type infoResponse struct {
 
 // infoCmd contains the configuration for the info command
 type infoCmd struct {
-	output string
+	output  string
+	manager instances.Manager
 }
 
 // preRun validates the parameters and flags
@@ -53,16 +54,9 @@ func (i *infoCmd) preRun(cmd *cobra.Command, args []string) error {
 	// This prevents "Error: ..." prefix from being printed
 	if i.output == "json" {
 		cmd.SilenceErrors = true
+		cmd.SilenceUsage = true
 	}
 
-	return nil
-}
-
-// run executes the info command logic
-func (i *infoCmd) run(cmd *cobra.Command, args []string) error {
-	runtimes := runtimesetup.ListAvailable()
-
-	// Discover agents from podman config directory
 	storageDir, err := cmd.Flags().GetString("storage")
 	if err != nil {
 		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to read --storage flag: %w", err))
@@ -73,13 +67,25 @@ func (i *infoCmd) run(cmd *cobra.Command, args []string) error {
 		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to resolve storage directory path: %w", err))
 	}
 
-	configDir := filepath.Join(absStorageDir, "runtimes", "podman", "config")
-	cfg, err := config.NewConfig(configDir)
+	manager, err := instances.NewManager(absStorageDir)
 	if err != nil {
-		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to create config: %w", err))
+		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to create manager: %w", err))
 	}
 
-	agents, err := cfg.ListAgents()
+	if err := runtimesetup.RegisterAll(manager); err != nil {
+		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to register runtimes: %w", err))
+	}
+
+	i.manager = manager
+
+	return nil
+}
+
+// run executes the info command logic
+func (i *infoCmd) run(cmd *cobra.Command, args []string) error {
+	runtimes := runtimesetup.ListAvailable()
+
+	agents, err := i.manager.ListAgents()
 	if err != nil {
 		return outputErrorIfJSON(cmd, i.output, fmt.Errorf("failed to list agents: %w", err))
 	}

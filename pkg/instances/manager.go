@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -65,6 +66,10 @@ type Manager interface {
 	Stop(ctx context.Context, id string) error
 	// Terminal starts an interactive terminal session in a running instance
 	Terminal(ctx context.Context, id string, command []string) error
+	// ListAgents returns the names of all agents configured across all registered runtimes.
+	// Agents are collected from runtimes that implement the runtime.AgentLister interface.
+	// The returned list is sorted and deduplicated.
+	ListAgents() ([]string, error)
 	// List returns all registered instances
 	List() ([]Instance, error)
 	// Get retrieves a specific instance by ID
@@ -533,6 +538,41 @@ func (m *manager) Reconcile() ([]string, error) {
 // RegisterRuntime registers a runtime with the manager's registry.
 func (m *manager) RegisterRuntime(rt runtime.Runtime) error {
 	return m.runtimeRegistry.Register(rt)
+}
+
+// ListAgents returns the names of all agents configured across all registered runtimes.
+func (m *manager) ListAgents() ([]string, error) {
+	runtimeTypes := m.runtimeRegistry.List()
+
+	seen := make(map[string]bool)
+	var agents []string
+
+	for _, rtType := range runtimeTypes {
+		rt, err := m.runtimeRegistry.Get(rtType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get runtime %s: %w", rtType, err)
+		}
+
+		agentLister, ok := rt.(runtime.AgentLister)
+		if !ok {
+			continue
+		}
+
+		rtAgents, err := agentLister.ListAgents()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list agents for runtime %s: %w", rtType, err)
+		}
+
+		for _, agent := range rtAgents {
+			if !seen[agent] {
+				seen[agent] = true
+				agents = append(agents, agent)
+			}
+		}
+	}
+
+	sort.Strings(agents)
+	return agents, nil
 }
 
 // generateUniqueName generates a unique name from the source directory
