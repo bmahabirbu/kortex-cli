@@ -29,11 +29,12 @@ func (s *systemImpl) Getuid() int {
 	cmd := exec.Command("wsl", "id", "-u")
 	output, err := cmd.Output()
 	if err == nil {
-		if uid, err := strconv.Atoi(strings.TrimSpace(string(output))); err == nil {
+		if uid, err := strconv.Atoi(strings.TrimSpace(string(output))); err == nil && uid != 0 {
 			return uid
 		}
 	}
 	// Fallback to 1000 (common Linux container default)
+	// Also used when WSL returns 0 (root), which conflicts with container base image
 	return 1000
 }
 
@@ -44,10 +45,11 @@ func (s *systemImpl) Getgid() int {
 	cmd := exec.Command("wsl", "id", "-g")
 	output, err := cmd.Output()
 	if err == nil {
-		if gid, err := strconv.Atoi(strings.TrimSpace(string(output))); err == nil {
+		if gid, err := strconv.Atoi(strings.TrimSpace(string(output))); err == nil && gid != 0 {
 			return gid
 		}
 	}
 	// Fallback to 1000 (common Linux container default)
+	// Also used when WSL returns 0 (root), which conflicts with container base image
 	return 1000
 }
